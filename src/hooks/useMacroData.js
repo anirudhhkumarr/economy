@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { fetchFredData, fetchStockData, fetchGoldData, FRED_SERIES } from '../utils/api';
+import { loadMacroBundle, FRED_SERIES } from '../utils/api';
 
 export function useMacroData(filterRange = 'MAX') {
     const [data, setData] = useState({
@@ -9,7 +9,7 @@ export function useMacroData(filterRange = 'MAX') {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Fetch MAX once on mount
+    // Load baked static macro.json once on mount
     useEffect(() => {
         let mounted = true;
 
@@ -17,52 +17,25 @@ export function useMacroData(filterRange = 'MAX') {
             setLoading(true);
             setError(null);
             try {
-                const seriesData = {};
-                const errors = [];
-
-                // Always fetch MAX to allow 1Y lookbacks
-                const fetchPromises = Object.entries(FRED_SERIES).map(async ([key, id]) => {
-                    const res = await fetchFredData(id, 'MAX');
-                    if (res) {
-                        seriesData[key] = res;
-                    } else {
-                        errors.push(key);
-                    }
-                });
-
-                // Fetch S&P 500 from Yahoo; gold from long monthly LBMA series (1833+)
-                fetchPromises.push((async () => {
-                    const res = await fetchStockData('^GSPC', 'MAX');
-                    if (res) {
-                        seriesData.SP500 = res;
-                    } else {
-                        errors.push('SP500');
-                    }
-                })());
-
-                fetchPromises.push((async () => {
-                    const res = await fetchGoldData('MAX');
-                    if (res) {
-                        seriesData.GOLD = res;
-                    } else {
-                        errors.push('GOLD');
-                    }
-                })());
-
-                await Promise.all(fetchPromises);
-
+                const bundle = await loadMacroBundle();
                 if (!mounted) return;
 
-                if (errors.length > 0) {
-                    console.error(`[MacroData] Failed series: ${errors.join(', ')}`);
-                    setError(`Some data points are currently unavailable. The dashboard may be incomplete.`);
+                const seriesData = bundle.series || {};
+                const missing = bundle.errors?.length
+                    ? bundle.errors
+                    : Object.keys(FRED_SERIES).concat(['SP500', 'GOLD']).filter((k) => !seriesData[k]);
+
+                if (Object.keys(seriesData).length === 0) {
+                    setError('Macro data bundle is empty. Rebuild with npm run data.');
+                } else if (missing.length > 0) {
+                    console.warn(`[MacroData] Incomplete series: ${missing.join(', ')}`);
                 }
 
                 setData(prev => ({ ...prev, raw: seriesData }));
             } catch (err) {
                 if (mounted) {
                     console.error('[MacroData] Critical Error:', err);
-                    setError('The financial data service is currently unavailable. Please try again later.');
+                    setError('The financial data bundle is currently unavailable. Please try again later.');
                 }
             } finally {
                 if (mounted) setLoading(false);
@@ -72,6 +45,7 @@ export function useMacroData(filterRange = 'MAX') {
         loadAllData();
         return () => { mounted = false; };
     }, []);
+
 
     // Compute transformations dynamically based on raw data and current filterRange
     const timeline = useMemo(() => {
