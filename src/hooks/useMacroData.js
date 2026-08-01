@@ -9,7 +9,6 @@ export function useMacroData(filterRange = 'MAX') {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Load baked static macro.json once on mount
     useEffect(() => {
         let mounted = true;
 

@@ -4,11 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
 
-/**
- * Static data contract — macro.json is baked at build time (no runtime proxy).
- */
-
-describe('Static macro bundle', () => {
+describe('macro.json bundle', () => {
     const originalFetch = globalThis.fetch;
 
     beforeEach(() => {
@@ -26,7 +22,7 @@ describe('Static macro bundle', () => {
         };
     });
 
-    it('loads baked series with expected keys and history depth', async () => {
+    it('loads series with expected keys and history depth', async () => {
         // Clear module-level cache between runs by re-importing isn't needed if first call
         const bundle = await loadMacroBundle();
         expect(bundle.series).toBeTruthy();

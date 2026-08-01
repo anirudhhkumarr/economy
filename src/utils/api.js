@@ -1,7 +1,3 @@
-/**
- * Static data client — loads bake-time macro.json (no backend / CORS proxy).
- */
-
 export const FRED_SERIES = {
     GDP: 'GDPC1',
     UNRATE: 'UNRATE',
@@ -36,16 +32,12 @@ export function clearMacroBundleCache() {
     cachedBundle = null;
 }
 
-
-/**
- * Load the build-time macro data bundle from static hosting.
- */
 export async function loadMacroBundle() {
     if (cachedBundle) return cachedBundle;
 
     const base = import.meta.env.BASE_URL || '/';
     const url = `${base}data/macro.json?_cb=${Date.now()}`;
-    console.log('[ApiClient] Loading static macro bundle...');
+    console.log('[ApiClient] Loading macro.json...');
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -54,7 +46,7 @@ export async function loadMacroBundle() {
 
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
-        throw new ApiError('Macro data missing from static deploy (got HTML). Run npm run data before build.', response.status, 'STATIC_MISCONFIG');
+        throw new ApiError('macro.json missing from deploy (got HTML). Run npm run data before build.', response.status, 'MISSING_DATA');
     }
 
     const json = await response.json();

@@ -1,6 +1,5 @@
 /**
- * Build-time data bake for a fully static site (no runtime proxy/backend).
- * Writes public/data/macro.json consumed by the SPA.
+ * Fetches macro series and writes public/data/macro.json.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
