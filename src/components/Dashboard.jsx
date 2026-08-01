@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useMacroData } from '../hooks/useMacroData';
 import { TimelineChart } from './TimelineChart';
 import { CorrelationPanel } from './CorrelationPanel';
@@ -54,16 +54,16 @@ export function Dashboard() {
         [activeSeries]
     );
 
-    // Keep regression axes on currently enabled metrics
-    useEffect(() => {
-        if (activeKeys.length < 2) return;
-        if (!activeKeys.includes(regX)) {
-            setRegX(activeKeys.find((k) => k !== regY) || activeKeys[0]);
-        }
-        if (!activeKeys.includes(regY)) {
-            setRegY(activeKeys.find((k) => k !== regX) || activeKeys[1] || activeKeys[0]);
-        }
+    // Resolve axes to currently enabled metrics without cascading setState in effects
+    const resolvedRegX = useMemo(() => {
+        if (activeKeys.includes(regX)) return regX;
+        return activeKeys.find((k) => k !== regY) || activeKeys[0] || regX;
     }, [activeKeys, regX, regY]);
+
+    const resolvedRegY = useMemo(() => {
+        if (activeKeys.includes(regY) && regY !== resolvedRegX) return regY;
+        return activeKeys.find((k) => k !== resolvedRegX) || activeKeys[0] || regY;
+    }, [activeKeys, regY, resolvedRegX]);
 
     const toggleSeries = (key) => {
         setActiveSeries(prev => ({
@@ -212,8 +212,8 @@ export function Dashboard() {
                     activeSeries={activeSeries}
                     seriesInfo={SERIES_INFO}
                     lag={lag}
-                    xKey={regX}
-                    yKey={regY}
+                    xKey={resolvedRegX}
+                    yKey={resolvedRegY}
                     onAxesChange={setRegAxes}
                 />
             </main>
